@@ -85,7 +85,7 @@ pip install flask pandas requests python-dotenv
 
 ## Konfiguracja
 
-Projekt wymaga pliku `.env` z danymi Twitch API:
+Jeżeli chcemy pobrać nowe dane z danego dnia za pomocą `scrapping.py` projekt wymaga pliku `.env` z danymi do Twitch API:
 
 ```env
 CLIENT_ID_KEY=twoj_client_id
