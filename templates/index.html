@@ -1,0 +1,1183 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <title>Twitch Data Visualization Dashboard</title>
+    <style>
+        body {
+            background-color: #0e0e10;
+            color: white;
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            box-sizing: border-box;
+        }
+
+        .dashboard-header-wrapper {
+            width: 100%;
+            max-width: 1400px;
+            border-bottom: 2px solid #1f1f23;
+            margin-bottom: 25px;
+            padding-bottom: 20px;
+            text-align: center;
+        }
+
+        .dashboard-header {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+        }
+
+        .twitch-logo {
+            fill: #a970ff;
+            filter: drop-shadow(0 0 8px rgba(145, 70, 255, 0.5));
+            flex-shrink: 0; 
+        }
+
+        .dashboard-header h1 {
+            margin: 0;
+            font-size: 36px; 
+            font-weight: 800;
+            color: #ffffff;
+            white-space: nowrap;
+            letter-spacing: 0.5px;
+        }
+
+        .controls {
+            background-color: #18181b;
+            padding: 12px 30px;
+            border-radius: 10px;
+            border: 1px solid #2f2f35;
+            margin-bottom: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 30px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+        }
+
+        .filters {
+            width: 100%;
+            max-width: 1400px;
+            background-color: #18181b;
+            padding: 12px 24px;
+            border-radius: 10px;
+            border: 1px solid #2f2f35;
+            margin-bottom: 25px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 22px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.32);
+            box-sizing: border-box;
+        }
+
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .control-group label {
+            font-size: 14px;
+            font-weight: bold;
+            color: #efeff1;
+        }
+
+        select,
+        input {
+            background-color: #1f1f23;
+            color: white;
+            border: 2px solid #9146FF;
+            padding: 8px 16px;
+            border-radius: 6px;
+            outline: none;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+            transition: all 0.2s;
+        }
+
+        input {
+            cursor: text;
+            min-width: 120px;
+        }
+
+        input[type="number"] {
+            width: 90px;
+        }
+
+        input[type="search"] {
+            min-width: 240px;
+        }
+
+        select:hover,
+        input:hover,
+        input:focus {
+            border-color: #a970ff;
+            background-color: #26262c;
+        }
+
+        select:disabled,
+        input:disabled {
+            cursor: wait;
+            opacity: 0.65;
+        }
+
+        .filter-status {
+            color: #adadb8;
+            font-size: 13px;
+            font-weight: bold;
+            width: 210px;
+            text-align: left;
+            font-variant-numeric: tabular-nums;
+            white-space: nowrap;
+        }
+
+        button {
+            background-color: #9146FF;
+            color: white;
+            border: 2px solid #a970ff;
+            padding: 8px 16px;
+            border-radius: 6px;
+            outline: none;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+            transition: all 0.2s;
+        }
+
+        button:hover:not(:disabled) {
+            background-color: #a970ff;
+            box-shadow: 0 0 12px rgba(145, 70, 255, 0.45);
+        }
+
+        button:disabled {
+            background-color: #2f2f35;
+            border-color: #3f3f46;
+            color: #adadb8;
+            cursor: not-allowed;
+            opacity: 0.75;
+        }
+
+        #canvas-container {
+            width: 100%;
+            max-width: 1400px; 
+            height: 680px; 
+            overflow: hidden;
+            background-color: #18181b;
+            border-radius: 16px;
+            border: 1px solid #2f2f35;
+            box-shadow: inset 0 0 40px rgba(0,0,0,0.6);
+            position: relative;
+        }
+
+        .nav-controls {
+            position: absolute;
+            top: 14px;
+            left: 14px;
+            z-index: 900;
+            display: flex;
+            gap: 8px;
+            background-color: rgba(24, 24, 27, 0.92);
+            border: 1px solid #3f3f46;
+            border-radius: 8px;
+            padding: 8px;
+            box-shadow: 0 8px 22px rgba(0,0,0,0.4);
+        }
+
+        .nav-controls button {
+            width: 36px;
+            height: 34px;
+            padding: 0;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .nav-controls .fit-button {
+            width: auto;
+            padding: 0 12px;
+        }
+
+        .graph-legend {
+            position: absolute;
+            top: 14px;
+            right: 14px;
+            z-index: 900;
+            background-color: rgba(24, 24, 27, 0.92);
+            border: 1px solid #3f3f46;
+            border-radius: 8px;
+            padding: 10px 12px;
+            color: #adadb8;
+            font-size: 12px;
+            line-height: 1.35;
+            box-shadow: 0 8px 22px rgba(0,0,0,0.4);
+            max-width: 240px;
+        }
+
+        .legend-title {
+            color: #ffffff;
+            font-weight: bold;
+            margin-bottom: 6px;
+        }
+
+        .legend-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin: 5px 0;
+        }
+
+        .legend-symbol {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            flex-shrink: 0;
+            border: 2px solid #a970ff;
+            background-color: #26262c;
+        }
+
+        .legend-symbol.flag {
+            border-color: #9146FF;
+            background: linear-gradient(90deg, #2f6fed 0 50%, #efeff1 50% 100%);
+        }
+
+        .legend-symbol.viewer {
+            width: 22px;
+            height: 22px;
+            background-color: #9146FF;
+        }
+
+        #loading-overlay {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            gap: 14px;
+            background-color: rgba(14, 14, 16, 0.72);
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.18s ease, visibility 0.18s ease;
+            z-index: 1000;
+        }
+
+        #canvas-container.loading #loading-overlay {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .spinner {
+            width: 46px;
+            height: 46px;
+            border: 4px solid rgba(169, 112, 255, 0.22);
+            border-top-color: #a970ff;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        .loading-label {
+            color: #efeff1;
+            font-size: 13px;
+            font-weight: bold;
+            letter-spacing: 0.4px;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        #graph-svg {
+            display: block;
+            margin: 0 auto;
+            width: 100%;
+            height: 100%;
+            cursor: grab;
+            touch-action: none;
+            user-select: none;
+        }
+
+        #graph-svg.panning {
+            cursor: grabbing;
+        }
+
+        .clickable-node {
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .clickable-node:hover {
+            filter: drop-shadow(0 0 12px #9146FF);
+        }
+
+        .node-text {
+            font-size: 14px;
+            fill: white;
+            text-anchor: middle;
+            pointer-events: none;
+            font-weight: bold;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+        }
+
+        .streamer-text {
+            font-size: 11px;
+            fill: #adadb8;
+            text-anchor: middle;
+            pointer-events: none;
+            font-weight: 500;
+        }
+
+        #tooltip {
+            position: absolute;
+            background-color: rgba(24, 24, 27, 0.98);
+            border: 2px solid #9146FF;
+            border-radius: 8px;
+            padding: 12px 16px;
+            color: white;
+            pointer-events: none; 
+            opacity: 0;
+            transition: opacity 0.15s ease-out;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+            z-index: 9999;
+            font-size: 13px;
+            min-width: 160px;
+            font-family: Arial, sans-serif;
+        }
+        #tooltip h3 {
+            margin: 0 0 8px 0;
+            color: #a970ff;
+            font-size: 16px;
+            border-bottom: 1px solid #2f2f35;
+            padding-bottom: 6px;
+            text-align: center;
+        }
+        #tooltip p {
+            margin: 6px 0;
+            line-height: 1.4;
+            color: #adadb8;
+            display: flex;
+            justify-content: space-between;
+            gap: 15px;
+        }
+        .highlight {
+            font-weight: bold;
+            color: #ffffff;
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="dashboard-header-wrapper">
+        <div class="dashboard-header">
+            <svg class="twitch-logo" viewBox="0 0 24 24" width="44" height="44">
+                <path d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714Z"/>
+            </svg>
+            <h1>Top Twitch Streamers</h1>
+        </div>
+    </div>
+
+    <div class="controls">
+        <div class="control-group">
+            <label>Category :</label>
+            <select id="game-select">
+                {% for game in games %}
+                    <option value="{{ game }}">{{ game }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="control-group">
+            <label>Day :</label>
+            <select id="date-select">
+                {% for date in dates %}
+                    <option value="{{ date }}">{{ date }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <button id="reset-graph" type="button" disabled>Reset graph</button>
+    </div>
+
+    <div class="filters">
+        <div class="control-group">
+            <label>Top N overall :</label>
+            <select id="top-n-select">
+                <option value="5">5</option>
+                <option value="10">10</option>
+                <option value="20">20</option>
+                <option value="all" selected>All</option>
+            </select>
+        </div>
+        <div class="control-group">
+            <label>Min viewers :</label>
+            <input id="min-viewers-input" type="number" min="0" step="10" value="0">
+        </div>
+        <div class="control-group">
+            <label>Search :</label>
+            <input id="streamer-search" type="search" placeholder="Streamer name">
+        </div>
+        <button id="clear-filters" type="button">Clear filters</button>
+        <div id="filter-status" class="filter-status">Visible: 0</div>
+    </div>
+
+    <div id="canvas-container">
+        <div id="tooltip"></div>
+        <div class="nav-controls">
+            <button id="zoom-in" type="button" aria-label="Zoom in">+</button>
+            <button id="zoom-out" type="button" aria-label="Zoom out">-</button>
+            <button id="fit-graph" class="fit-button" type="button">Fit</button>
+        </div>
+        <div class="graph-legend">
+            <div class="legend-title">Legend</div>
+            <div class="legend-row"><span class="legend-symbol flag"></span><span>Flag node: language group</span></div>
+            <div class="legend-row"><span class="legend-symbol viewer"></span><span>Bigger creator node: more current viewers</span></div>
+            <div class="legend-row"><span class="legend-symbol"></span><span>Drag graph to move, use Fit to reset view</span></div>
+        </div>
+        <div id="loading-overlay" aria-live="polite" aria-busy="true">
+            <div class="spinner"></div>
+            <div class="loading-label">Loading data</div>
+        </div>
+        <svg id="graph-svg" width="1400" height="660"></svg>
+    </div>
+
+    <script>
+        const svg = document.getElementById('graph-svg');
+        const SVG_NS = "http://www.w3.org/2000/svg";
+        
+        let currentData = null;
+        let expandedLanguages = new Set(); 
+        let currentRequest = null;
+        let graphBounds = { width: 1400, height: 660 };
+        let viewBox = { x: 0, y: 0, width: 1400, height: 660 };
+        let pendingAutoFit = true;
+        let languageCenters = new Map();
+        let isPanning = false;
+        let panStart = null;
+        let suppressClickUntil = 0;
+
+        const canvasContainer = document.getElementById('canvas-container');
+        const gameSelect = document.getElementById('game-select');
+        const dateSelect = document.getElementById('date-select');
+        const resetButton = document.getElementById('reset-graph');
+        const topNSelect = document.getElementById('top-n-select');
+        const minViewersInput = document.getElementById('min-viewers-input');
+        const streamerSearch = document.getElementById('streamer-search');
+        const clearFiltersButton = document.getElementById('clear-filters');
+        const filterStatus = document.getElementById('filter-status');
+        const zoomInButton = document.getElementById('zoom-in');
+        const zoomOutButton = document.getElementById('zoom-out');
+        const fitGraphButton = document.getElementById('fit-graph');
+
+        const langToCountry = {
+            'en': 'gb', 'de': 'de', 'fr': 'fr', 'es': 'es',
+            'pl': 'pl', 'ru': 'ru', 'it': 'it', 'pt': 'pt',
+            'ja': 'jp', 'ko': 'kr', 'zh': 'cn', 'tr': 'tr',
+            'nl': 'nl', 'sv': 'se', 'da': 'dk', 'fi': 'fi',
+            'cs': 'cz', 'hu': 'hu', 'uk': 'ua', 'el': 'gr',
+            'ar': 'sa', 'bg': 'bg', 'ro': 'ro', 'th': 'th',
+            'no': 'no'
+        };
+
+        function createLine(x1, y1, x2, y2, color, width, opacity) {
+            const line = document.createElementNS(SVG_NS, 'line');
+            line.setAttribute('x1', x1);
+            line.setAttribute('y1', y1);
+            line.setAttribute('x2', x2);
+            line.setAttribute('y2', y2);
+            line.setAttribute('stroke', color);
+            line.setAttribute('stroke-width', width);
+            line.setAttribute('opacity', opacity);
+            return line;
+        }
+
+        function createCircle(cx, cy, r, fill, stroke, strokeWidth, className) {
+            const circle = document.createElementNS(SVG_NS, 'circle');
+            circle.setAttribute('cx', cx);
+            circle.setAttribute('cy', cy);
+            circle.setAttribute('r', r);
+            circle.setAttribute('fill', fill);
+            circle.setAttribute('stroke', stroke);
+            circle.setAttribute('stroke-width', strokeWidth);
+            if (className) circle.setAttribute('class', className);
+            return circle;
+        }
+
+        function createText(x, y, content, className) {
+            const text = document.createElementNS(SVG_NS, 'text');
+            text.setAttribute('x', x);
+            text.setAttribute('y', y);
+            if (className) text.setAttribute('class', className);
+            text.textContent = content;
+            return text;
+        }
+
+        function createFallbackLanguageNode(x, y, radius, label) {
+            const group = document.createElementNS(SVG_NS, 'g');
+            group.setAttribute('class', 'clickable-node');
+
+            const circle = createCircle(x, y, radius, "#1f1f23", "#9146FF", "2.5", null);
+            const innerCircle = createCircle(x, y, radius - 9, "none", "#a970ff", "1.5", null);
+            innerCircle.setAttribute('opacity', '0.85');
+
+            const horizontalLine = createLine(x - radius + 11, y, x + radius - 11, y, "#a970ff", "1.2", "0.8");
+            const verticalLine = createLine(x, y - radius + 11, x, y + radius - 11, "#a970ff", "1.2", "0.8");
+            const text = createText(x, y + 4, label === "OTHER" ? "..." : label, "node-text");
+            text.style.fontSize = "12px";
+
+            group.appendChild(circle);
+            group.appendChild(innerCircle);
+            group.appendChild(horizontalLine);
+            group.appendChild(verticalLine);
+            group.appendChild(text);
+            return group;
+        }
+
+        function setLoading(isLoading) {
+            canvasContainer.classList.toggle('loading', isLoading);
+            gameSelect.disabled = isLoading;
+            dateSelect.disabled = isLoading;
+            topNSelect.disabled = isLoading;
+            minViewersInput.disabled = isLoading;
+            streamerSearch.disabled = isLoading;
+            updateClearFiltersButton(isLoading);
+            zoomInButton.disabled = isLoading;
+            zoomOutButton.disabled = isLoading;
+            fitGraphButton.disabled = isLoading;
+            updateResetButton(isLoading);
+        }
+
+        function updateResetButton(forceDisabled = false) {
+            resetButton.disabled = forceDisabled || expandedLanguages.size === 0;
+        }
+
+        function escapeHtml(value) {
+            return String(value)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
+        function formatMetric(value) {
+            if (value === null || value === undefined || value === "") return "";
+
+            const numberValue = Number(String(value).replace(/,/g, ''));
+            if (Number.isFinite(numberValue)) {
+                return numberValue.toLocaleString();
+            }
+
+            return escapeHtml(value);
+        }
+
+        function getFilterState() {
+            const topNValue = topNSelect.value;
+            const parsedMinViewers = Number(minViewersInput.value);
+
+            return {
+                topN: topNValue === "all" ? Infinity : Number(topNValue),
+                minViewers: Number.isFinite(parsedMinViewers) && parsedMinViewers > 0 ? parsedMinViewers : 0,
+                search: streamerSearch.value.trim().toLowerCase()
+            };
+        }
+
+        function getFilteredLanguages() {
+            if (!currentData || !currentData.languages) return [];
+
+            const filters = getFilterState();
+            const languageOrder = new Map();
+            currentData.languages.forEach((langObj, index) => {
+                languageOrder.set(langObj.lang, index);
+            });
+
+            const topStreamers = currentData.languages
+                .flatMap(langObj => langObj.streamers.map(streamer => ({
+                    lang: langObj.lang,
+                    streamer: streamer
+                })))
+                .filter(item => item.streamer.viewer_count >= filters.minViewers)
+                .filter(item => !filters.search || item.streamer.user_name.toLowerCase().includes(filters.search))
+                .sort((a, b) => b.streamer.viewer_count - a.streamer.viewer_count)
+                .slice(0, filters.topN);
+
+            const groupedStreamers = new Map();
+            topStreamers.forEach(item => {
+                if (!groupedStreamers.has(item.lang)) {
+                    groupedStreamers.set(item.lang, []);
+                }
+                groupedStreamers.get(item.lang).push(item.streamer);
+            });
+
+            return Array.from(groupedStreamers.entries())
+                .sort((a, b) => (languageOrder.get(a[0]) ?? 0) - (languageOrder.get(b[0]) ?? 0))
+                .map(([lang, streamers]) => ({
+                    lang: lang,
+                    streamers: streamers
+                }));
+        }
+
+        function updateFilterStatus(visibleStreamers, visibleLanguages) {
+            filterStatus.textContent = `Visible: ${visibleStreamers} / Languages: ${visibleLanguages}`;
+        }
+
+        function sumViewerCount(streamers) {
+            return streamers.reduce((sum, streamer) => sum + Number(streamer.viewer_count || 0), 0);
+        }
+
+        function positionTooltip(event) {
+            const tooltip = document.getElementById('tooltip');
+            if (!tooltip) return;
+
+            const containerRect = canvasContainer.getBoundingClientRect();
+            tooltip.style.left = (event.clientX - containerRect.left + 15) + 'px';
+            tooltip.style.top = (event.clientY - containerRect.top + 15) + 'px';
+        }
+
+        function showTooltip(html, event) {
+            const tooltip = document.getElementById('tooltip');
+            if (!tooltip) return;
+
+            tooltip.innerHTML = html;
+            tooltip.style.opacity = '1';
+            positionTooltip(event);
+        }
+
+        function hasActiveFilters() {
+            return topNSelect.value !== "all"
+                || Number(minViewersInput.value) > 0
+                || streamerSearch.value.trim() !== "";
+        }
+
+        function updateClearFiltersButton(forceDisabled = false) {
+            clearFiltersButton.disabled = forceDisabled || !hasActiveFilters();
+        }
+
+        function applyViewBox() {
+            svg.setAttribute('viewBox', `${viewBox.x} ${viewBox.y} ${viewBox.width} ${viewBox.height}`);
+        }
+
+        function clampViewBox() {
+            if (viewBox.width >= graphBounds.width) {
+                viewBox.x = (graphBounds.width - viewBox.width) / 2;
+            } else {
+                viewBox.x = Math.max(0, Math.min(viewBox.x, graphBounds.width - viewBox.width));
+            }
+
+            if (viewBox.height >= graphBounds.height) {
+                viewBox.y = (graphBounds.height - viewBox.height) / 2;
+            } else {
+                viewBox.y = Math.max(0, Math.min(viewBox.y, graphBounds.height - viewBox.height));
+            }
+        }
+
+        function fitGraphToView() {
+            const rect = canvasContainer.getBoundingClientRect();
+            const aspectRatio = rect.width / rect.height;
+            const paddedWidth = graphBounds.width + 120;
+            const paddedHeight = graphBounds.height + 70;
+
+            if (paddedWidth / paddedHeight > aspectRatio) {
+                viewBox.width = paddedWidth;
+                viewBox.height = paddedWidth / aspectRatio;
+            } else {
+                viewBox.height = paddedHeight;
+                viewBox.width = paddedHeight * aspectRatio;
+            }
+
+            viewBox.x = (graphBounds.width - viewBox.width) / 2;
+            viewBox.y = (graphBounds.height - viewBox.height) / 2;
+            clampViewBox();
+            applyViewBox();
+        }
+
+        function zoomView(factor, clientX = null, clientY = null) {
+            const rect = svg.getBoundingClientRect();
+            const anchorX = clientX === null ? rect.left + rect.width / 2 : clientX;
+            const anchorY = clientY === null ? rect.top + rect.height / 2 : clientY;
+            const relativeX = (anchorX - rect.left) / rect.width;
+            const relativeY = (anchorY - rect.top) / rect.height;
+            const graphX = viewBox.x + relativeX * viewBox.width;
+            const graphY = viewBox.y + relativeY * viewBox.height;
+            const nextWidth = Math.max(280, Math.min(graphBounds.width * 2.2, viewBox.width * factor));
+            const nextHeight = Math.max(160, Math.min(graphBounds.height * 2.2, viewBox.height * factor));
+
+            viewBox.x = graphX - relativeX * nextWidth;
+            viewBox.y = graphY - relativeY * nextHeight;
+            viewBox.width = nextWidth;
+            viewBox.height = nextHeight;
+            clampViewBox();
+            applyViewBox();
+        }
+
+        function centerViewOn(x, y) {
+            viewBox.x = x - viewBox.width / 2;
+            viewBox.y = y - viewBox.height * 0.42;
+            clampViewBox();
+            applyViewBox();
+        }
+
+        function centerLanguage(lang) {
+            const center = languageCenters.get(lang);
+            if (center) {
+                centerViewOn(center.x, center.y);
+            }
+        }
+
+        function loadData() {
+            const game = gameSelect.value;
+            const date = dateSelect.value;
+            
+            if (!date) return;
+
+            if (currentRequest) {
+                currentRequest.abort();
+            }
+
+            const requestController = new AbortController();
+            currentRequest = requestController;
+            setLoading(true);
+
+            fetch(`/api/graph?game=${encodeURIComponent(game)}&date=${encodeURIComponent(date)}`, {
+                signal: requestController.signal
+            })
+                .then(res => res.json())
+                .then(data => {
+                    currentData = data;
+                    expandedLanguages.clear(); 
+                    pendingAutoFit = true;
+                    const tooltip = document.getElementById('tooltip');
+                    if(tooltip) tooltip.style.opacity = '0';
+                    renderGraph();
+                })
+                .catch(error => {
+                    if (error.name === 'AbortError') return;
+
+                    currentData = { game, languages: [] };
+                    svg.innerHTML = '';
+                    svg.appendChild(createText(700, 300, "Could not load data", "node-text"));
+                })
+                .finally(() => {
+                    if (currentRequest === requestController) {
+                        currentRequest = null;
+                        setLoading(false);
+                    }
+                });
+        }
+
+        function hideTooltip() {
+            const tooltip = document.getElementById('tooltip');
+            if(tooltip) tooltip.style.opacity = '0';
+        }
+
+        function applyFilterChanges() {
+            hideTooltip();
+            pendingAutoFit = true;
+            updateClearFiltersButton();
+            renderGraph();
+        }
+
+        function renderGraph() {
+            svg.innerHTML = '';
+            languageCenters.clear();
+
+            if (!currentData || currentData.languages.length === 0) {
+                graphBounds = { width: 1400, height: 660 };
+                fitGraphToView();
+                svg.appendChild(createText(700, 300, "No data", "node-text"));
+                updateFilterStatus(0, 0);
+                updateResetButton();
+                return;
+            }
+
+            const filteredLanguages = getFilteredLanguages();
+            const visibleStreamerCount = filteredLanguages.reduce((sum, langObj) => sum + langObj.streamers.length, 0);
+            const visibleViewerCount = filteredLanguages.reduce((sum, langObj) => sum + sumViewerCount(langObj.streamers), 0);
+            updateFilterStatus(visibleStreamerCount, filteredLanguages.length);
+
+            if (filteredLanguages.length === 0) {
+                graphBounds = { width: 1400, height: 660 };
+                fitGraphToView();
+                svg.appendChild(createText(700, 300, "No streamers match current filters", "node-text"));
+                updateResetButton();
+                return;
+            }
+
+            const filters = getFilterState();
+
+            const defs = document.createElementNS(SVG_NS, 'defs');
+            svg.appendChild(defs);
+
+            const yGame = 80;
+            const yLanguage = 280; 
+            const yStreamer = 500; 
+
+            const MIN_LANG_WIDTH = 130;   
+            const STREAMER_SPACING = 100; 
+
+            let allViewers = [];
+            filteredLanguages.forEach(l => l.streamers.forEach(s => allViewers.push(s.viewer_count)));
+            const maxViewers = allViewers.length > 0 ? Math.max(...allViewers) : 1;
+            const minViewers = allViewers.length > 0 ? Math.min(...allViewers) : 0;
+
+            let totalRequiredWidth = 0;
+            const langBlocks = [];
+
+            filteredLanguages.forEach(langObj => {
+                let blockWidth = MIN_LANG_WIDTH;
+                let isExpanded = expandedLanguages.has(langObj.lang) || Boolean(filters.search);
+                
+                if (isExpanded) {
+                    const numStreamers = langObj.streamers.length;
+                    blockWidth = Math.max(MIN_LANG_WIDTH, numStreamers * STREAMER_SPACING);
+                }
+                
+                langBlocks.push({
+                    lang: langObj.lang,
+                    streamers: langObj.streamers,
+                    width: blockWidth,
+                    isExpanded: isExpanded
+                });
+                
+                totalRequiredWidth += blockWidth;
+            });
+
+            const svgWidth = Math.max(1400, totalRequiredWidth + 100); 
+            svg.setAttribute('width', svgWidth);
+            graphBounds = { width: svgWidth, height: 660 };
+
+            if (pendingAutoFit) {
+                fitGraphToView();
+                pendingAutoFit = false;
+            } else {
+                clampViewBox();
+                applyViewBox();
+            }
+            
+            const xGame = svgWidth / 2;
+            
+            const linesToDraw = [];
+            const nodesToDraw = [];
+            
+            let currentX = (svgWidth - totalRequiredWidth) / 2;
+
+            langBlocks.forEach(block => {
+                const xLanguage = currentX + (block.width / 2);
+                languageCenters.set(block.lang, { x: xLanguage, y: yLanguage });
+                linesToDraw.push(createLine(xGame, yGame, xLanguage, yLanguage, "#3f3f46", "2.5", "0.7"));
+                
+                const rawLangCode = block.lang.toLowerCase();
+                const countryCode = langToCountry[rawLangCode];
+                const radiusLang = 30;
+                let langCircle = null;
+
+                if (countryCode) {
+                    const flagPatternId = `flag-${countryCode}`;
+                    const flagPattern = document.createElementNS(SVG_NS, 'pattern');
+                    flagPattern.setAttribute('id', flagPatternId);
+                    flagPattern.setAttribute('patternUnits', 'userSpaceOnUse');
+                    flagPattern.setAttribute('width', radiusLang * 2);
+                    flagPattern.setAttribute('height', radiusLang * 2);
+                    flagPattern.setAttribute('x', xLanguage - radiusLang);
+                    flagPattern.setAttribute('y', yLanguage - radiusLang);
+
+                    const flagImage = document.createElementNS(SVG_NS, 'image');
+                    flagImage.setAttribute('href', `https://flagcdn.com/w80/${countryCode}.png`);
+                    flagImage.setAttribute('width', radiusLang * 2);
+                    flagImage.setAttribute('height', radiusLang * 2);
+                    flagImage.setAttribute('preserveAspectRatio', 'xMidYMid slice');
+
+                    flagPattern.appendChild(flagImage);
+                    defs.appendChild(flagPattern);
+
+                    langCircle = createCircle(xLanguage, yLanguage, radiusLang, `url(#${flagPatternId})`, "#9146FF", "2.5", "clickable-node");
+                } else {
+                    langCircle = createFallbackLanguageNode(xLanguage, yLanguage, radiusLang, block.lang);
+                }
+                
+                langCircle.onclick = function(event) {
+                    if (Date.now() < suppressClickUntil) return;
+
+                    if (expandedLanguages.has(block.lang)) {
+                        expandedLanguages.delete(block.lang);
+                    } else {
+                        expandedLanguages.add(block.lang);
+                    }
+                    const tooltip = document.getElementById('tooltip');
+                    if(tooltip) tooltip.style.opacity = '0';
+                    renderGraph();
+                    centerLanguage(block.lang);
+                };
+
+                langCircle.onmouseover = function(event) {
+                    const languageViewerCount = sumViewerCount(block.streamers);
+                    showTooltip(`
+                        <h3>${escapeHtml(block.lang)}</h3>
+                        <p><span class="highlight">Creators :</span> <span>${block.streamers.length.toLocaleString()}</span></p>
+                        <p><span class="highlight">Viewers total :</span> <span>${languageViewerCount.toLocaleString()}</span></p>
+                    `, event);
+                };
+
+                langCircle.onmousemove = positionTooltip;
+                langCircle.onmouseout = hideTooltip;
+                
+                nodesToDraw.push(langCircle);
+                nodesToDraw.push(createText(xLanguage, yLanguage + radiusLang + 16, block.lang, "streamer-text"));
+                
+                if (block.isExpanded) {
+                    const numStreamers = block.streamers.length;
+                    let startX = currentX + (block.width - (numStreamers - 1) * STREAMER_SPACING) / 2;
+                    
+                    block.streamers.forEach((streamer, sIndex) => {
+                        const xStreamer = startX + (sIndex * STREAMER_SPACING);
+                        linesToDraw.push(createLine(xLanguage, yLanguage, xStreamer, yStreamer, "#9146FF", "1.5", "0.4"));
+                        
+                        let radius = 20; 
+                        if (maxViewers !== minViewers) {
+                            radius = 14 + (22 * (streamer.viewer_count - minViewers) / (maxViewers - minViewers));
+                        }
+
+                        const patternId = `avatar-${streamer.user_name.replace(/\\W/g, '')}`;
+                        if (streamer.profile_image_url) {
+                            const pattern = document.createElementNS(SVG_NS, 'pattern');
+                            pattern.setAttribute('id', patternId);
+                            pattern.setAttribute('patternUnits', 'userSpaceOnUse');
+                            pattern.setAttribute('width', radius * 2);
+                            pattern.setAttribute('height', radius * 2);
+                            pattern.setAttribute('x', xStreamer - radius);
+                            pattern.setAttribute('y', yStreamer - radius);
+
+                            const image = document.createElementNS(SVG_NS, 'image');
+                            image.setAttribute('href', streamer.profile_image_url);
+                            image.setAttribute('width', radius * 2);
+                            image.setAttribute('height', radius * 2);
+                            image.setAttribute('preserveAspectRatio', 'xMidYMid slice');
+
+                            pattern.appendChild(image);
+                            defs.appendChild(pattern);
+                        }
+                        
+                        const fillColor = streamer.profile_image_url ? `url(#${patternId})` : "#1f1f23";
+                        const streamerCircle = createCircle(xStreamer, yStreamer, radius, fillColor, "#a970ff", "2.5", "clickable-node");
+                        
+                        streamerCircle.onmouseover = function(event) {
+                            const tooltip = document.getElementById('tooltip');
+                            if (tooltip) {
+                                tooltip.style.opacity = '1';
+                                const uptimeVal = streamer.uptime !== undefined ? streamer.uptime : 0;
+                                const avgViewersHtml = streamer.avg_viewers_30d 
+                                    ? `<p><span class="highlight">Viewers avg (30d):</span> <span>${formatMetric(streamer.avg_viewers_30d)}</span></p>` 
+                                    : "";
+                                const followersGainedHtml = streamer.followers_gained_30d
+                                    ? `<p><span class="highlight">Followers gained (30d):</span> <span>${formatMetric(streamer.followers_gained_30d)}</span></p>`
+                                    : "";
+
+                                tooltip.innerHTML = `
+                                    <h3>${escapeHtml(streamer.user_name)}</h3>
+                                    <p><span class="highlight">Viewers :</span> <span>${streamer.viewer_count.toLocaleString()}</span></p>
+                                    <p><span class="highlight">Stream duration :</span> <span>${uptimeVal} min</span></p>
+                                    ${avgViewersHtml}
+                                    ${followersGainedHtml}
+                                    <hr style="border: none; border-top: 1px solid #2f2f35; margin: 10px 0 6px 0;">
+                                    <p style="color: #a970ff; font-size: 11px; text-align: center; margin: 0; justify-content: center;">Click to open channel -&gt;</p>
+                                `;
+                            }
+                        };
+                        
+                        streamerCircle.onmousemove = function(event) {
+                            const tooltip = document.getElementById('tooltip');
+                            if (tooltip) {
+                                const containerRect = document.getElementById('canvas-container').getBoundingClientRect();
+                                tooltip.style.left = (event.clientX - containerRect.left + 15) + 'px';
+                                tooltip.style.top = (event.clientY - containerRect.top + 15) + 'px';
+                            }
+                        };
+                        
+                        streamerCircle.onmouseout = function() {
+                            const tooltip = document.getElementById('tooltip');
+                            if (tooltip) tooltip.style.opacity = '0';
+                        };
+
+                        streamerCircle.onclick = function(event) {
+                            if (Date.now() < suppressClickUntil) return;
+
+                            window.open(`https://twitch.tv/${streamer.user_name}`, '_blank');
+                            event.stopPropagation();
+                        };
+
+                        nodesToDraw.push(streamerCircle);
+                        
+                        const displayName = streamer.user_name.length > 12 ? streamer.user_name.substring(0, 10) + '...' : streamer.user_name;
+                        nodesToDraw.push(createText(xStreamer, yStreamer + radius + 16, `${displayName} (${streamer.viewer_count})`, "streamer-text"));
+                    });
+                }
+                
+                currentX += block.width;
+            });
+
+            const radiusGame = 55; 
+            let gameCircle = null;
+            
+            if (currentData.box_art_url) {
+                const gamePatternId = `game-art-${currentData.game.replace(/\W/g, '')}`;
+                const gamePattern = document.createElementNS(SVG_NS, 'pattern');
+                gamePattern.setAttribute('id', gamePatternId);
+                gamePattern.setAttribute('patternUnits', 'userSpaceOnUse');
+                gamePattern.setAttribute('width', radiusGame * 2);
+                gamePattern.setAttribute('height', radiusGame * 2);
+                gamePattern.setAttribute('x', xGame - radiusGame);
+                gamePattern.setAttribute('y', yGame - radiusGame);
+
+                const gameImage = document.createElementNS(SVG_NS, 'image');
+                gameImage.setAttribute('href', currentData.box_art_url);
+                gameImage.setAttribute('width', radiusGame * 2);
+                gameImage.setAttribute('height', radiusGame * 2);
+                gameImage.setAttribute('preserveAspectRatio', 'xMidYMid slice'); 
+
+                gamePattern.appendChild(gameImage);
+                defs.appendChild(gamePattern);
+
+                gameCircle = createCircle(xGame, yGame, radiusGame, `url(#${gamePatternId})`, "#adadb8", "4", "clickable-node");
+            } else {
+                gameCircle = createCircle(xGame, yGame, radiusGame, "#444449", "#adadb8", "4", "clickable-node");
+            }
+
+            gameCircle.onmouseover = function(event) {
+                showTooltip(`
+                    <h3>${escapeHtml(currentData.game)}</h3>
+                    <p><span class="highlight">Creators :</span> <span>${visibleStreamerCount.toLocaleString()}</span></p>
+                    <p><span class="highlight">Viewers total :</span> <span>${visibleViewerCount.toLocaleString()}</span></p>
+                    <p><span class="highlight">Languages :</span> <span>${filteredLanguages.length.toLocaleString()}</span></p>
+                `, event);
+            };
+
+            gameCircle.onmousemove = positionTooltip;
+            gameCircle.onmouseout = hideTooltip;
+            nodesToDraw.push(gameCircle);
+            nodesToDraw.push(createText(xGame, yGame + radiusGame + 26, currentData.game, "node-text"));
+            linesToDraw.forEach(l => svg.appendChild(l));
+            nodesToDraw.forEach(n => svg.appendChild(n));
+            updateResetButton();
+        }
+
+        resetButton.addEventListener('click', function() {
+            expandedLanguages.clear();
+            hideTooltip();
+            pendingAutoFit = true;
+            renderGraph();
+        });
+
+        clearFiltersButton.addEventListener('click', function() {
+            topNSelect.value = "all";
+            minViewersInput.value = "0";
+            streamerSearch.value = "";
+            updateClearFiltersButton();
+            applyFilterChanges();
+        });
+
+        gameSelect.addEventListener('change', loadData);
+        dateSelect.addEventListener('change', loadData);
+        topNSelect.addEventListener('change', applyFilterChanges);
+        minViewersInput.addEventListener('input', applyFilterChanges);
+        streamerSearch.addEventListener('input', applyFilterChanges);
+
+        zoomInButton.addEventListener('click', function() {
+            pendingAutoFit = false;
+            zoomView(0.82);
+        });
+
+        zoomOutButton.addEventListener('click', function() {
+            pendingAutoFit = false;
+            zoomView(1.22);
+        });
+
+        fitGraphButton.addEventListener('click', function() {
+            pendingAutoFit = false;
+            fitGraphToView();
+        });
+
+        svg.addEventListener('pointerdown', function(event) {
+            if (event.button !== undefined && event.button !== 0) return;
+            const clickedNode = event.target.closest ? event.target.closest('.clickable-node') : null;
+            if (clickedNode) return;
+
+            isPanning = true;
+            panStart = {
+                x: event.clientX,
+                y: event.clientY,
+                viewX: viewBox.x,
+                viewY: viewBox.y,
+                moved: false
+            };
+            svg.classList.add('panning');
+            svg.setPointerCapture(event.pointerId);
+        });
+
+        svg.addEventListener('pointermove', function(event) {
+            if (!isPanning || !panStart) return;
+
+            const rect = svg.getBoundingClientRect();
+            const dx = event.clientX - panStart.x;
+            const dy = event.clientY - panStart.y;
+
+            if (Math.abs(dx) > 4 || Math.abs(dy) > 4) {
+                panStart.moved = true;
+            }
+
+            viewBox.x = panStart.viewX - (dx / rect.width) * viewBox.width;
+            viewBox.y = panStart.viewY - (dy / rect.height) * viewBox.height;
+            pendingAutoFit = false;
+            clampViewBox();
+            applyViewBox();
+            event.preventDefault();
+        });
+
+        function endPan(event) {
+            if (!isPanning) return;
+
+            if (panStart && panStart.moved) {
+                suppressClickUntil = Date.now() + 250;
+            }
+
+            isPanning = false;
+            panStart = null;
+            svg.classList.remove('panning');
+
+            if (event && svg.hasPointerCapture(event.pointerId)) {
+                svg.releasePointerCapture(event.pointerId);
+            }
+        }
+
+        svg.addEventListener('pointerup', endPan);
+        svg.addEventListener('pointercancel', endPan);
+        svg.addEventListener('pointerleave', endPan);
+
+        svg.addEventListener('wheel', function(event) {
+            event.preventDefault();
+            pendingAutoFit = false;
+            zoomView(event.deltaY < 0 ? 0.88 : 1.12, event.clientX, event.clientY);
+        }, { passive: false });
+
+        window.addEventListener('resize', function() {
+            if (pendingAutoFit) {
+                fitGraphToView();
+            } else {
+                clampViewBox();
+                applyViewBox();
+            }
+        });
+
+        updateClearFiltersButton();
+        window.onload = loadData;
+    </script>
+</body>
+</html>
